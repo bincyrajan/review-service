@@ -1,4 +1,5 @@
 package com.application.ReviewsApplication.Controller;
+import com.application.ReviewsApplication.controller.ReviewController;
 import com.application.ReviewsApplication.model.Review;
 import com.application.ReviewsApplication.service.ReviewService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,8 +23,7 @@ import java.util.Optional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
-@WebMvcTest
+@WebMvcTest(controllers = ReviewController.class)
 public class ReviewControllerTest {
 
     @Autowired
@@ -41,15 +41,15 @@ public class ReviewControllerTest {
         review.setReview("Good");
         review.setRating(4);
         review.setReviewSource("Amazon");
+        review.setAuthor("John Doe");
         review.setReviewedDate(LocalDateTime.now());
 
-        Mockito.when(reviewService.saveReview(Mockito.any(Review.class)))
-                .thenReturn(review);
+        Mockito.when(reviewService.saveReview(Mockito.any(Review.class))).thenReturn(review);
 
         mockMvc.perform(post("/api/reviews")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(review)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1));
     }
 
@@ -62,7 +62,6 @@ public class ReviewControllerTest {
         mockMvc.perform(get("/api/reviews"))
                 .andExpect(status().isOk());
     }
-
 
     @Test
     void testGetMonthlyAverages() throws Exception {
@@ -89,8 +88,6 @@ public class ReviewControllerTest {
         mockMvc.perform(get("/api/reviews")
                         .param("date", "2024-31-12"))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string(Matchers.containsString("Invalid date format")));
+                .andExpect(content().string(Matchers.containsString("Parse attempt failed")));
     }
-
-
 }

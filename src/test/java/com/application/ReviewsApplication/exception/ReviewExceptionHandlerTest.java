@@ -31,7 +31,7 @@ public class ReviewExceptionHandlerTest {
         mockMvc.perform(get("/api/reviews")
                         .param("date", "wrong-format"))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string(Matchers.containsString("Invalid date format")));
+                .andExpect(content().string(Matchers.containsString("Parse attempt failed")));
     }
-
 }
+

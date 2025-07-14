@@ -28,7 +28,11 @@ public class ReviewServiceTest {
     void testSaveReview() {
         Review review = new Review();
         review.setReview("Good");
-        Mockito.when(repository.save(review)).thenReturn(review);
+        review.setAuthor("John");
+        review.setReviewSource("Amazon");
+        review.setReviewedDate(LocalDateTime.now());
+
+        Mockito.when(repository.save(Mockito.any(Review.class))).thenReturn(review);
         Assertions.assertEquals(review, service.saveReview(review));
     }
 
@@ -37,8 +41,7 @@ public class ReviewServiceTest {
         LocalDate date = LocalDate.of(2024, 6, 25);
         List<Review> mockList = List.of(new Review());
 
-        Mockito.when(repository.findByReviewedDateBetween(Mockito.any(), Mockito.any()))
-                .thenReturn(mockList);
+        Mockito.when(repository.findByReviewedDateBetween(Mockito.any(), Mockito.any())).thenReturn(mockList);
 
         List<Review> reviews = service.getReviews(Optional.of(date), Optional.empty(), Optional.empty());
         Assertions.assertEquals(1, reviews.size());
@@ -46,12 +49,11 @@ public class ReviewServiceTest {
 
     @Test
     void testGetMonthlyAverages() {
-        Review r1 = new Review();
-        r1.setReviewSource("Amazon");
-        r1.setReviewedDate(LocalDateTime.of(2024, 6, 15, 10, 0));
-        r1.setRating(4);
+        Object[] row = new Object[]{"Amazon", "2024-06", 4.0};
+        List<Object[]> mockResult = new ArrayList<>();
+        mockResult.add(row);
 
-        Mockito.when(repository.findAll()).thenReturn(List.of(r1));
+        Mockito.when(repository.getMonthlyAverageRatings()).thenReturn(mockResult);
 
         Map<String, Map<String, Double>> result = service.getMonthlyAverages();
         Assertions.assertEquals(4.0, result.get("Amazon").get("2024-06"));
@@ -59,12 +61,13 @@ public class ReviewServiceTest {
 
     @Test
     void testGetRatingCounts() {
-        Review r1 = new Review();
-        r1.setRating(5);
+        Object[] row = new Object[]{5, 1L};
+        List<Object[]> mockResult = new ArrayList<>();
+        mockResult.add(row);
 
-        Mockito.when(repository.findAll()).thenReturn(List.of(r1));
+        Mockito.when(repository.getRatingCountsFromDB()).thenReturn(mockResult);
 
         Map<Integer, Long> result = service.getRatingCounts();
-        Assertions.assertEquals(1, result.get(5));
+        Assertions.assertEquals(1L, result.get(5));
     }
 }

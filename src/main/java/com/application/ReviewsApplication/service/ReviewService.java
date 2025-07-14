@@ -4,17 +4,18 @@ import com.application.ReviewsApplication.exception.NoReviewsFoundException;
 import com.application.ReviewsApplication.model.Review;
 import com.application.ReviewsApplication.repository.ReviewRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
-import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class ReviewService {
+
+    private static final Logger logger = LoggerFactory.getLogger(ReviewService.class);
 
     @Autowired
     private ReviewRepository repository;
@@ -24,8 +25,9 @@ public class ReviewService {
     }
 
     public List<Review> getReviews(Optional<LocalDate> date, Optional<String> source, Optional<Integer> rating) {
-        List<Review> reviews;
+        logger.debug("getReviews called with date={}, source={}, rating={}", date, source, rating);
 
+        List<Review> reviews;
         if (date.isPresent()) {
             LocalDateTime start = date.get().atStartOfDay();
             LocalDateTime end = date.get().atTime(LocalTime.MAX);
@@ -50,58 +52,48 @@ public class ReviewService {
         }
 
         if (reviews.isEmpty()) {
+            logger.warn("No reviews found for given criteria.");
             throw new NoReviewsFoundException("No reviews found matching the criteria.");
         }
 
         return reviews;
     }
 
-
     public Map<String, Map<String, Double>> getMonthlyAverages() {
-        List<Review> allReviews = repository.findAll();
-        if (allReviews.isEmpty()) {
+        List<Object[]> results = repository.getMonthlyAverageRatings();
+
+        if (results.isEmpty()) {
+            logger.warn("No monthly average ratings found.");
             throw new NoReviewsFoundException("No reviews found for monthly averages.");
         }
 
-        Map<String, Map<String, List<Integer>>> temp = new TreeMap<>();
+        Map<String, Map<String, Double>> finalResult = new TreeMap<>();
+        for (Object[] row : results) {
+            String source = (String) row[0];
+            String month = (String) row[1];
+            Double avgRating = ((Number) row[2]).doubleValue();
 
-        for (Review r : allReviews) {
-            String source = r.getReviewSource();
-            String monthKey = r.getReviewedDate().getYear() + "-" + String.format("%02d", r.getReviewedDate().getMonthValue());
-
-            temp.computeIfAbsent(source, k -> new TreeMap<>())
-                    .computeIfAbsent(monthKey, k -> new ArrayList<>())
-                    .add(r.getRating());
+            finalResult.computeIfAbsent(source, k -> new TreeMap<>()).put(month, avgRating);
         }
 
-        Map<String, Map<String, Double>> result = new TreeMap<>();
-        for (var entry : temp.entrySet()) {
-            Map<String, Double> avgMap = new TreeMap<>();
-            for (var inner : entry.getValue().entrySet()) {
-                List<Integer> ratings = inner.getValue();
-                double avg = ratings.stream().mapToInt(Integer::intValue).average().orElse(0.0);
-                avgMap.put(inner.getKey(), avg);
-            }
-            result.put(entry.getKey(), avgMap);
+        return finalResult;
+    }
+
+    public Map<Integer, Long> getRatingCounts() {
+        List<Object[]> rows = repository.getRatingCountsFromDB();
+
+        if (rows.isEmpty()) {
+            logger.warn("No rating counts found.");
+            throw new NoReviewsFoundException("No rating counts found.");
+        }
+
+        Map<Integer, Long> result = new TreeMap<>();
+        for (Object[] row : rows) {
+            Integer rating = (Integer) row[0];
+            Long count = ((Number) row[1]).longValue();
+            result.put(rating, count);
         }
 
         return result;
     }
-
-
-    public Map<Integer, Long> getRatingCounts() {
-        List<Review> allReviews = repository.findAll();
-        if (allReviews.isEmpty()) {
-            throw new NoReviewsFoundException("No rating counts found.");
-        }
-
-        return allReviews.stream()
-                .collect(Collectors.groupingBy(
-                        Review::getRating,
-                        TreeMap::new,
-                        Collectors.counting()
-                ));
-    }
-
-
 }
