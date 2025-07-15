@@ -16,21 +16,10 @@ public class ReviewExceptionHandler {
         return ResponseEntity.badRequest().body("Invalid input parameter: " + ex.getMessage());
     }
 
-    @ExceptionHandler(ConversionFailedException.class)
-    public ResponseEntity<String> handleConversionFailedException(ConversionFailedException ex) {
-        return ResponseEntity.badRequest().body("Invalid input value: " + ex.getMessage());
-    }
-
     @ExceptionHandler(DateTimeParseException.class)
     public ResponseEntity<String> handleDateParseException(DateTimeParseException ex) {
         return ResponseEntity.badRequest().body("Invalid date format. Please use ISO format (YYYY-MM-DD)." );
     }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException ex) {
-        return ResponseEntity.badRequest().body("Invalid input parameter: " + ex.getMessage());
-    }
-
     @ExceptionHandler(NoReviewsFoundException.class)
     public ResponseEntity<String> handleNoReviewsFoundException(NoReviewsFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
